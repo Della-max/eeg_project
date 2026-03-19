@@ -1,6 +1,0 @@
-torch>=1.8.0
-numpy>=1.19.0
-matplotlib>=3.3.0
-flask>=2.0.0
-pandas>=1.2.0  # 用于数据处理（ai_analysis_utils中使用）
-scikit-learn>=0.24.0  # 用于机器学习功能
