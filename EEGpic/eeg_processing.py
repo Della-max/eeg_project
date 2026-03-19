@@ -331,6 +331,89 @@ class EEGProcessor:
         model.fit(features)
         state_sequence = model.predict(features)
         return model, state_sequence
+    
+    
+    def realtime_eeg_display(self, eeg_data, channel_names=None, window_size=2.0, fps=30):
+        """
+        实时显示EEG数据
+        :param eeg_data: EEG数据，形状为(n_channels, n_samples)
+        :param channel_names: 通道名称列表，如果为None则使用默认名称
+        :param window_size: 显示窗口大小（秒）
+        :param fps: 帧率（帧/秒）
+        """
+        n_channels, n_samples = eeg_data.shape
+        
+        # 如果没有提供通道名称，使用默认名称
+        if channel_names is None:
+            channel_names = [f'Channel {i+1}' for i in range(n_channels)]
+        
+        # 计算窗口大小对应的样本数
+        window_samples = int(window_size * self.sampling_freq)
+        
+        # 创建图形和子图
+        fig, axes = plt.subplots(n_channels, 1, figsize=(12, 2 * n_channels), sharex=True)
+        if n_channels == 1:
+            axes = [axes]  # 确保axes是列表
+        
+        # 初始化线条
+        lines = []
+        time_axis = np.arange(window_samples) / self.sampling_freq
+        
+        for i, ax in enumerate(axes):
+            line, = ax.plot(time_axis, np.zeros(window_samples))
+            lines.append(line)
+            ax.set_ylabel(channel_names[i])
+            ax.grid(True, alpha=0.3)
+        
+        axes[-1].set_xlabel('时间 (秒)')
+        fig.suptitle('实时EEG数据显示', fontsize=12)
+        fig.tight_layout()
+        
+        # 初始化函数
+        def init():
+            for line in lines:
+                line.set_data([], [])
+            return lines
+        
+        # 更新函数
+        def update(frame):
+            # 计算当前窗口的起始和结束位置
+            start = frame * int(self.sampling_freq / fps)
+            end = start + window_samples
+            
+            # 确保不超出数据范围
+            if end > n_samples:
+                end = n_samples
+                start = max(0, end - window_samples)
+            
+            # 更新时间轴
+            current_time = np.arange(start, end) / self.sampling_freq - start / self.sampling_freq
+            
+            # 更新每个通道的数据
+            for i, line in enumerate(lines):
+                if end > start:
+                    line.set_data(current_time, eeg_data[i, start:end])
+                    # 自动调整y轴范围
+                    axes[i].set_ylim(eeg_data[i, start:end].min() - 0.1, eeg_data[i, start:end].max() + 0.1)
+            
+            return lines
+        
+        # 创建动画
+        ani = animation.FuncAnimation(
+            fig, update, frames=int(n_samples * fps / self.sampling_freq), 
+            init_func=init, interval=1000/fps, blit=True
+        )
+        
+        # 按键事件处理函数
+        def on_key_press(event):
+            if event.key == 'q':
+                plt.close(fig)
+                print("实时显示已关闭")
+        
+        # 绑定按键事件
+        fig.canvas.mpl_connect('key_press_event', on_key_press)
+        
+        plt.show()
 
 def generate_fake_eeg_data(n_channels=8, duration=60, sfreq=250, save_dir='fakenum'):
     """
@@ -465,6 +548,9 @@ def main():
     # 10. 绘制状态区间图
     processor.plot_state_intervals(state_sequence, time_per_window=2.0)
     
+    print("\n正在显示实时EEG数据... 按q键关闭")
+    channel_names = [f'Channel {i+1}' for i in range(params['n_channels'])]
+    processor.realtime_eeg_display(cleaned_data, channel_names=channel_names, window_size=2.0, fps=30)
     # 打印结果信息
     print(f"\n分窗后数据形状: {segmented_data.shape}")
     print(f"提取的特征数量: {features.shape[1]}")
