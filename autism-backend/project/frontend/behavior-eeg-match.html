@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>掬星平台 - 行为-EEG时间对齐结果</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .container {
+            width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .match-form {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .match-form input {
+            padding: 8px 10px;
+            width: 150px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .match-form button {
+            padding: 8px 15px;
+            background: #409eff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f5f7fa;
+            color: #333;
+            font-weight: normal;
+        }
+        tr:hover {
+            background: #f9f9f9;
+        }
+        .empty {
+            text-align: center;
+            padding: 50px;
+            color: #999;
+        }
+        #message {
+            margin: 10px 0;
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>行为-EEG时间对齐结果</h2>
+        <div class="match-form">
+            <input type="text" id="child_id" placeholder="输入儿童ID，如 C001">
+            <button onclick="matchBehaviorEeg()">执行时间对齐</button>
+            <div id="message"></div>
+        </div>
+        <div class="table-container">
+            <table id="matchTable">
+                <thead>
+                    <tr>
+                        <th>行为记录ID</th>
+                        <th>行为类型</th>
+                        <th>EEG特征ID</th>
+                        <th>α波功率(%)</th>
+                        <th>β波功率(%)</th>
+                        <th>θ波功率(%)</th>
+                        <th>时间重叠率</th>
+                    </tr>
+                </thead>
+                <tbody id="matchBody">
+                    <tr><td colspan="7" class="empty">请输入儿童ID并执行对齐</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 执行行为-EEG时间对齐
+        async function matchBehaviorEeg() {
+            const child_id = document.getElementById('child_id').value.trim();
+            const matchBody = document.getElementById('matchBody');
+            const message = document.getElementById('message');
+
+            if (!child_id) {
+                message.textContent = '儿童ID不能为空！';
+                message.style.color = 'red';
+                return;
+            }
+
+            matchBody.innerHTML = '<tr><td colspan="7" class="empty">正在执行时间对齐...</td></tr>';
+
+            try {
+                const response = await fetch('http://localhost:3000/api/behavior-eeg/match', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ child_id })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    message.textContent = result.message;
+                    message.style.color = 'green';
+                    
+                    const data = result.data;
+                    if (data.length === 0) {
+                        matchBody.innerHTML = '<tr><td colspan="7" class="empty">未匹配到行为-EEG数据</td></tr>';
+                        return;
+                    }
+
+                    // 渲染匹配结果
+                    let html = '';
+                    data.forEach(item => {
+                        html += `
+                            <tr>
+                                <td>${item.behavior_record_id}</td>
+                                <td>${item.behavior_type}</td>
+                                <td>${item.eeg_feature_id}</td>
+                                <td>${item.alpha_power}</td>
+                                <td>${item.beta_power}</td>
+                                <td>${item.theta_power}</td>
+                                <td>${(item.overlap_rate * 100).toFixed(2)}%</td>
+                            </tr>
+                        `;
+                    });
+                    matchBody.innerHTML = html;
+                } else {
+                    message.textContent = result.message;
+                    message.style.color = 'red';
+                    matchBody.innerHTML = `<tr><td colspan="7" class="empty">对齐失败：${result.message}</td></tr>`;
+                }
+            } catch (err) {
+                message.textContent = '网络错误！';
+                message.style.color = 'red';
+                matchBody.innerHTML = `<tr><td colspan="7" class="empty">网络错误：${err.message}</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

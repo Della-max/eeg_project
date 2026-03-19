@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加儿童信息</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+            font-size: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>添加儿童信息</h1>
+        
+        <div class="form-group">
+            <label for="childId">儿童ID *</label>
+            <input type="text" id="childId" name="childId" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="childName">儿童姓名 *</label>
+            <input type="text" id="childName" name="childName" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="gender">性别</label>
+            <select id="gender" name="gender">
+                <option value="男">男</option>
+                <option value="女">女</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="age">年龄</label>
+            <input type="number" id="age" name="age" min="0">
+        </div>
+        
+        <div class="form-group">
+            <label for="autismType">自闭症类型</label>
+            <input type="text" id="autismType" name="autismType">
+        </div>
+        
+        <div class="form-group">
+            <label for="interventionPlan">干预方案</label>
+            <input type="text" id="interventionPlan" name="interventionPlan">
+        </div>
+        
+        <button id="submitBtn" onclick="submitForm()">提交添加</button>
+        
+        <div id="message" class="message" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function submitForm() {
+            const childId = document.getElementById('childId').value;
+            const childName = document.getElementById('childName').value;
+            const gender = document.getElementById('gender').value;
+            const age = document.getElementById('age').value;
+            const autismType = document.getElementById('autismType').value;
+            const interventionPlan = document.getElementById('interventionPlan').value;
+            
+            // 简单验证
+            if (!childId || !childName) {
+                showMessage('儿童ID和姓名不能为空！', 'error');
+                return;
+            }
+            
+            const messageDiv = document.getElementById('message');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // 显示加载状态
+            submitBtn.disabled = true;
+            submitBtn.textContent = '提交中...';
+            
+            try {
+                // 发送POST请求到正确的API地址
+                const response = await fetch('http://localhost:3000/api/child/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        child_id: childId,
+                        child_name: childName,
+                        gender: gender,
+                        age: age ? parseInt(age) : null,
+                        autism_type: autismType,
+                        intervention_plan: interventionPlan
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                // 检查响应类型
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const result = await response.json();
+                    console.log('Response JSON:', result);
+                    
+                    if (result.success) {
+                        showMessage('添加成功！', 'success');
+                        // 清空表单
+                        document.getElementById('childId').value = '';
+                        document.getElementById('childName').value = '';
+                        document.getElementById('gender').value = '男';
+                        document.getElementById('age').value = '';
+                        document.getElementById('autismType').value = '';
+                        document.getElementById('interventionPlan').value = '';
+                    } else {
+                        showMessage('添加失败: ' + result.message, 'error');
+                    }
+                } else {
+                    // 如果返回HTML，尝试解析错误信息
+                    const html = await response.text();
+                    console.error('Received HTML instead of JSON:', html);
+                    showMessage('添加失败: 服务器返回了非JSON响应', 'error');
+                }
+            } catch (err) {
+                console.error('Request failed:', err);
+                showMessage('添加失败: ' + err.message, 'error');
+            } finally {
+                // 恢复按钮状态
+                submitBtn.disabled = false;
+                submitBtn.textContent = '提交添加';
+            }
+        }
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

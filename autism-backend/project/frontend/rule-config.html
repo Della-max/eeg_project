@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>掬星平台 - 校准规则配置</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei"; }
+        .container { width: 1000px; margin:50px auto; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); border-radius:8px; }
+        h2 { margin-bottom:20px; color:#333; }
+        table { width:100%; border-collapse:collapse; }
+        th, td { padding:12px; text-align:left; border-bottom:1px solid #eee; }
+        th { background:#f5f7fa; }
+        tr:hover { background:#f9f9f9; }
+        .empty { text-align:center; padding:50px; color:#999; }
+        #message { margin-bottom:20px; color:red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>EEG 行为校准规则列表</h2>
+        <div id="message"></div>
+        <table>
+            <thead>
+                <tr>
+                    <th>规则ID</th>
+                    <th>原始行为标签</th>
+                    <th>校准条件</th>
+                    <th>修正后标签</th>
+                    <th>创建人</th>
+                </tr>
+            </thead>
+            <tbody id="ruleBody">
+                <tr><td colspan="5" class="empty">正在加载规则...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 页面加载时获取所有规则
+        window.onload = async function() {
+            try {
+                const response = await fetch('http://localhost:3000/api/calibration/rule/get');
+                const result = await response.json();
+
+                const ruleBody = document.getElementById('ruleBody');
+                if (result.success) {
+                    const rules = result.data;
+                    if (rules.length === 0) {
+                        ruleBody.innerHTML = '<tr><td colspan="5" class="empty">暂无校准规则</td></tr>';
+                        return;
+                    }
+
+                    let html = '';
+                    rules.forEach(rule => {
+                        html += `
+                            <tr>
+                                <td>${rule.rule_id}</td>
+                                <td>${rule.original_label}</td>
+                                <td>${rule.condition_type}波功率${rule.condition_operator}${rule.condition_value}</td>
+                                <td>${rule.corrected_label}</td>
+                                <td>${rule.creator_id}</td>
+                            </tr>
+                        `;
+                    });
+                    ruleBody.innerHTML = html;
+                } else {
+                    ruleBody.innerHTML = `<tr><td colspan="5" class="empty">加载失败：${result.message}</td></tr>`;
+                }
+            } catch (err) {
+                document.getElementById('message').textContent = `网络错误：${err.message}`;
+            }
+        };
+    </script>
+</body>
+</html>

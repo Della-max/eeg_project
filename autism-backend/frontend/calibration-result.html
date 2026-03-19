@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>掬星平台 - EEG 校准行为结果</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei"; }
+        .container { width: 1200px; margin:50px auto; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); border-radius:8px; }
+        .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid #eee; }
+        .filter input { padding:8px; width:150px; border:1px solid #ddd; border-radius:4px; }
+        .filter button { padding:8px 15px; margin-left:10px; background:#409eff; color:#fff; border:none; border-radius:4px; cursor:pointer; }
+        table { width:100%; border-collapse:collapse; }
+        th, td { padding:12px; text-align:left; border-bottom:1px solid #eee; }
+        th { background:#f5f7fa; }
+        tr:hover { background:#f9f9f9; }
+        .corrected { color:#e6a23c; font-weight:bold; }
+        .original { color:#666; }
+        .time-convert { font-size:12px; color:#999; margin-top:5px; }
+        .empty { text-align:center; padding:50px; color:#999; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>EEG 校准后行为记录</h2>
+            <div class="filter">
+                <input type="text" id="child_id" placeholder="输入儿童ID，如 C001">
+                <button onclick="getCalibrationResult()">查询</button>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>行为记录ID</th>
+                    <th>场景</th>
+                    <th>原始行为标签</th>
+                    <th>校准后行为标签</th>
+                    <th>校准原因</th>
+                    <th>行为时间</th>
+                    <th>EEG特征（α/β/θ波%）</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody">
+                <tr><td colspan="7" class="empty">请输入儿童ID查询校准结果</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 时间戳转本地时间
+        function timestampToLocal(timestamp) {
+            return new Date(Number(timestamp)).toLocaleString();
+        }
+
+        // 查询校准结果
+        async function getCalibrationResult() {
+            const child_id = document.getElementById('child_id').value.trim();
+            const resultBody = document.getElementById('resultBody');
+            resultBody.innerHTML = '<tr><td colspan="7" class="empty">正在查询...</td></tr>';
+
+            try {
+                let url = 'http://localhost:3000/api/calibration/result/get';
+                if (child_id) url += `?child_id=${child_id}`;
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    const data = result.data;
+                    if (data.length === 0) {
+                        resultBody.innerHTML = '<tr><td colspan="7" class="empty">暂无校准结果</td></tr>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.forEach(item => {
+                        const startTime = timestampToLocal(item.start_time);
+                        const endTime = timestampToLocal(item.end_time);
+                        html += `
+                            <tr>
+                                <td>${item.record_id}</td>
+                                <td>${item.scene}</td>
+                                <td class="original">${item.original_label}</td>
+                                <td class="corrected">${item.corrected_label}</td>
+                                <td>${item.calibration_reason}</td>
+                                <td>
+                                    ${startTime} ~ ${endTime}
+                                    <div class="time-convert">${item.start_time} ~ ${item.end_time}</div>
+                                </td>
+                                <td>${item.alpha_power}/${item.beta_power}/${item.theta_power}</td>
+                            </tr>
+                        `;
+                    });
+                    resultBody.innerHTML = html;
+                } else {
+                    resultBody.innerHTML = `<tr><td colspan="7" class="empty">查询失败：${result.message}</td></tr>`;
+                }
+            } catch (err) {
+                resultBody.innerHTML = `<tr><td colspan="7" class="empty">网络错误：${err.message}</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

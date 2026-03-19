@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>掬星平台 - 自闭症儿童行为干预辅助系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        /* 顶部标题 */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+        .header h1 {
+            color: #303133;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        /* 功能模块容器 */
+        .module-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        /* 功能模块卡片 */
+        .module-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 20px;
+            transition: transform 0.2s;
+        }
+        .module-card:hover {
+            transform: translateY(-5px);
+        }
+        .module-card h2 {
+            color: #409eff;
+            font-size: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+        /* 功能项 */
+        .function-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .function-item:hover {
+            background-color: #f0f9eb;
+        }
+        .function-item a {
+            text-decoration: none;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+        }
+        .function-item a::before {
+            content: "→";
+            color: #67c23a;
+            margin-right: 8px;
+            font-weight: bold;
+        }
+        /* 隐藏无权限项 */
+        .hidden {
+            display: none !important;
+        }
+        /* 底部说明 */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部标题 -->
+    <div class="header">
+        <h1>自闭症儿童行为干预辅助系统</h1>
+        <p>行为-EEG双模态数据采集、校准、建模一体化平台</p>
+    </div>
+
+    <!-- 功能模块容器 -->
+    <div class="module-container">
+        <!-- 1. 数据采集模块（新增儿童/记录人添加入口） -->
+        <div class="module-card">
+            <h2>📝 数据采集</h2>
+            <div class="function-item" id="item-child-add">
+                <a href="child-add.html">儿童信息添加</a>
+            </div>
+            <div class="function-item" id="item-user-add">
+                <a href="user-add.html">记录人信息添加</a>
+            </div>
+            <div class="function-item" id="item-behavior-add">
+                <a href="behavior-add.html">行为记录录入</a>
+            </div>
+            <div class="function-item" id="item-eeg-add">
+                <a href="eeg-add.html">EEG特征数据上传</a>
+            </div>
+        </div>
+
+        <!-- 2. 数据校准模块 -->
+        <div class="module-card">
+            <h2>🎯 数据校准</h2>
+            <div class="function-item" id="item-behavior-eeg-match">
+                <a href="behavior-eeg-match.html">行为-EEG时间对齐</a>
+            </div>
+            <div class="function-item" id="item-rule-config">
+                <a href="rule-config.html">校准规则配置</a>
+            </div>
+            <div class="function-item" id="item-calibration-execute">
+                <a href="calibration-execute.html">执行EEG行为校准</a>
+            </div>
+        </div>
+
+        <!-- 3. 数据查看模块 -->
+        <div class="module-card">
+            <h2>📊 数据查看</h2>
+            <div class="function-item" id="item-behavior-list">
+                <a href="behavior-list.html">原始行为记录查看</a>
+            </div>
+            <div class="function-item" id="item-calibration-result">
+                <a href="calibration-result.html">校准后行为结果查看</a>
+            </div>
+        </div>
+
+        <!-- 4. 建模导出模块 -->
+        <div class="module-card">
+            <h2>🔬 建模导出</h2>
+            <div class="function-item" id="item-model-export">
+                <a href="model-export.html">双模态数据导出（建模专用）</a>
+            </div>
+            <div class="function-item" id="item-model-tips">
+                <a href="javascript:alert('请使用model-export.html导出的数据，运行lstm_model.py进行行为预测建模')">LSTM建模说明</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部说明 -->
+    <div class="footer">
+        © 2026 掬星平台 - 自闭症儿童行为干预辅助系统
+    </div>
+
+    <script>
+        // ========== 权限控制（适配无登录模式） ==========
+        // 预设默认角色：researcher（研究者）/ teacher（教育者）
+        const DEFAULT_ROLE = 'researcher'; // 可改为teacher测试教育者视角
+
+        // 定义各角色可见的功能项ID（新增儿童/记录人添加权限）
+        const rolePermissions = {
+            researcher: [
+                'item-child-add', 'item-user-add', // 新增：研究者可添加儿童/记录人
+                'item-behavior-add', 'item-eeg-add',
+                'item-behavior-eeg-match', 'item-rule-config', 'item-calibration-execute',
+                'item-behavior-list', 'item-calibration-result',
+                'item-model-export', 'item-model-tips'
+            ],
+            teacher: [
+                // 教育者不可添加，仅能使用已有ID录入/查看
+                'item-behavior-add', 'item-behavior-list', 'item-calibration-result'
+            ]
+        };
+
+        // 初始化权限控制
+        function initPermission() {
+            // 获取当前角色的可见项列表
+            const visibleItems = rolePermissions[DEFAULT_ROLE];
+            // 获取所有功能项
+            const allItems = document.querySelectorAll('.function-item');
+            
+            // 遍历控制显隐
+            allItems.forEach(item => {
+                if (visibleItems.includes(item.id)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        }
+
+        // 页面加载执行
+        window.onload = function() {
+            initPermission();
+        };
+    </script>
+</body>
+</html>

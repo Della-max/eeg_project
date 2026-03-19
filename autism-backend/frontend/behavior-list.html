@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>掬星平台 - 行为记录列表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .container {
+            width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .title {
+            font-size: 20px;
+            color: #333;
+        }
+        .filter {
+            display: flex;
+            align-items: center;
+        }
+        .filter label {
+            margin-right: 10px;
+            color: #666;
+        }
+        .filter input {
+            padding: 8px 10px;
+            width: 150px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .filter button {
+            margin-left: 10px;
+            padding: 8px 15px;
+            background: #409eff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f5f7fa;
+            color: #333;
+            font-weight: normal;
+        }
+        tr:hover {
+            background: #f9f9f9;
+        }
+        .empty {
+            text-align: center;
+            padding: 50px;
+            color: #999;
+        }
+        .time-convert {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">自闭症儿童行为记录列表</h1>
+            <div class="filter">
+                <label>筛选儿童ID：</label>
+                <input type="text" id="filterChildId" placeholder="如 C001">
+                <button onclick="loadBehaviorList()">查询</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="behaviorTable">
+                <thead>
+                    <tr>
+                        <th>记录ID</th>
+                        <th>儿童ID</th>
+                        <th>行为类型</th>
+                        <th>行为强度</th>
+                        <th>行为时间</th>
+                        <th>场景</th>
+                        <th>记录人ID</th>
+                        <th>录入时间</th>
+                    </tr>
+                </thead>
+                <tbody id="behaviorBody">
+                    <!-- 数据会动态加载到这里 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时自动加载所有行为记录
+        window.onload = function() {
+            loadBehaviorList();
+        };
+
+        // 加载行为记录列表
+        async function loadBehaviorList() {
+            const filterChildId = document.getElementById('filterChildId').value.trim();
+            const behaviorBody = document.getElementById('behaviorBody');
+            // 清空表格
+            behaviorBody.innerHTML = '<tr><td colspan="8" class="empty">正在加载数据...</td></tr>';
+
+            try {
+                // 拼接查询参数（支持筛选儿童ID）
+                let url = 'http://localhost:3000/api/behavior/get';
+                if (filterChildId) {
+                    url += `?child_id=${filterChildId}`;
+                }
+
+                // 调用后端接口
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    const data = result.data;
+                    if (data.length === 0) {
+                        // 无数据时显示提示
+                        behaviorBody.innerHTML = '<tr><td colspan="8" class="empty">暂无行为记录</td></tr>';
+                        return;
+                    }
+
+                    // 渲染表格数据
+                    let html = '';
+                    data.forEach(item => {
+                        // 时间戳转换为可读时间（UTC转本地时间）
+                        const startTime = new Date(Number(item.start_time)).toLocaleString();
+                        const endTime = new Date(Number(item.end_time)).toLocaleString();
+                        const createTime = new Date(item.create_time).toLocaleString();
+
+                        html += `
+                            <tr>
+                                <td>${item.record_id}</td>
+                                <td>${item.child_id}</td>
+                                <td>${item.behavior_type}</td>
+                                <td>${item.intensity}级（${getIntensityText(item.intensity)}</td>
+                                <td>
+                                    ${startTime} ~ ${endTime}
+                                    <div class="time-convert">
+                                        原始时间戳：${item.start_time} ~ ${item.end_time}
+                                    </div>
+                                </td>
+                                <td>${item.scene}</td>
+                                <td>${item.observer_id}</td>
+                                <td>${createTime}</td>
+                            </tr>
+                        `;
+                    });
+                    behaviorBody.innerHTML = html;
+                } else {
+                    behaviorBody.innerHTML = `<tr><td colspan="8" class="empty">加载失败：${result.message}</td></tr>`;
+                }
+            } catch (err) {
+                behaviorBody.innerHTML = `<tr><td colspan="8" class="empty">网络错误：${err.message}</td></tr>`;
+            }
+        }
+
+        // 转换强度数字为文字描述
+        function getIntensityText(intensity) {
+            switch(intensity) {
+                case 1: return '弱）';
+                case 2: return '中）';
+                case 3: return '强）';
+                default: return '未知）';
+            }
+        }
+    </script>
+</body>
+</html>

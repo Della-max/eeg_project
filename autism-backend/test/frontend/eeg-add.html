@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>掬星平台 - EEG特征上传</title>
+    <style>
+        .container { width: 600px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .form-item { margin: 15px 0; }
+        label { display: inline-block; width: 120px; }
+        input, select { padding: 8px; width: 300px; }
+        button { padding: 10px 20px; background: #409eff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #message { margin-top: 20px; color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>EEG特征数据上传（预处理后）</h2>
+        <div class="form-item">
+            <label>儿童ID：</label>
+            <input type="text" id="child_id" placeholder="如 C001">
+        </div>
+        <div class="form-item">
+            <label>α波功率(0-100)：</label>
+            <input type="number" id="alpha_power" step="0.1" min="0" max="100" placeholder="如 55.2">
+        </div>
+        <div class="form-item">
+            <label>β波功率(0-100)：</label>
+            <input type="number" id="beta_power" step="0.1" min="0" max="100" placeholder="如 20.1">
+        </div>
+        <div class="form-item">
+            <label>θ波功率(0-100)：</label>
+            <input type="number" id="theta_power" step="0.1" min="0" max="100" placeholder="如 24.7">
+        </div>
+        <div class="form-item">
+            <label>采样时间戳：</label>
+            <input type="text" id="sample_time" placeholder="13位毫秒时间戳，如 1735689924000">
+        </div>
+        <div class="form-item">
+            <label>场景：</label>
+            <input type="text" id="scene" placeholder="如 课堂讲课">
+        </div>
+        <div class="form-item">
+            <label>上传人ID：</label>
+            <input type="text" id="uploader_id" placeholder="如 R001">
+        </div>
+        <button onclick="addEeg()">提交上传</button>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        async function addEeg() {
+            const data = {
+                child_id: document.getElementById('child_id').value,
+                alpha_power: parseFloat(document.getElementById('alpha_power').value),
+                beta_power: parseFloat(document.getElementById('beta_power').value),
+                theta_power: parseFloat(document.getElementById('theta_power').value),
+                sample_time: document.getElementById('sample_time').value,
+                scene: document.getElementById('scene').value,
+                uploader_id: document.getElementById('uploader_id').value
+            };
+
+            // 前端校验
+            if (isNaN(data.alpha_power) || isNaN(data.beta_power) || isNaN(data.theta_power)) {
+                document.getElementById('message').textContent = '波功率必须是数字！';
+                return;
+            }
+            if (!data.sample_time.match(/^\d{13}$/)) {
+                document.getElementById('message').textContent = '时间戳必须是13位数字！';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/eeg/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                
+                const message = document.getElementById('message');
+                if (result.success) {
+                    message.style.color = 'green';
+                    message.textContent = result.message;
+                } else {
+                    message.style.color = 'red';
+                    message.textContent = result.message;
+                }
+            } catch (err) {
+                document.getElementById('message').textContent = '网络错误，请检查后端是否启动';
+            }
+        }
+    </script>
+</body>
+</html>

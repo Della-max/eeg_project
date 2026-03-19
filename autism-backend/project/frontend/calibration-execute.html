@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>掬星平台 - 执行EEG行为校准</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .container {
+            width: 500px;
+            margin: 100px auto;
+            padding: 30px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-item {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #409eff;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #337ecc;
+        }
+        #message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: none;
+        }
+        .success {
+            display: block;
+            background: #f0f9eb;
+            color: #67c23a;
+        }
+        .error {
+            display: block;
+            background: #fef0f0;
+            color: #f56c6c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>执行EEG行为标签校准</h2>
+        <div class="form-item">
+            <label for="child_id">儿童ID（必填）</label>
+            <input type="text" id="child_id" placeholder="例如：C001" value="C001">
+        </div>
+        <button onclick="executeCalibration()">开始校准</button>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        async function executeCalibration() {
+            const child_id = document.getElementById('child_id').value.trim();
+            const message = document.getElementById('message');
+            
+            // 1. 前置校验
+            if (!child_id) {
+                message.className = 'error';
+                message.textContent = '请输入儿童ID！';
+                return;
+            }
+
+            // 2. 清空之前的提示，显示加载状态
+            message.className = '';
+            message.textContent = '正在执行校准，请稍候...';
+            message.style.display = 'block';
+
+            try {
+                // 3. 调用后端校准接口
+                const response = await fetch('http://localhost:3000/api/calibration/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ child_id })
+                });
+
+                const result = await response.json();
+
+                // 4. 显示结果
+                if (result.success) {
+                    message.className = 'success';
+                    message.textContent = result.message;
+                    // 校准成功后，可自动跳转到结果页面（可选）
+                    // setTimeout(() => { window.location.href = 'calibration-result.html'; }, 2000);
+                } else {
+                    message.className = 'error';
+                    message.textContent = `校准失败：${result.message}`;
+                }
+            } catch (err) {
+                // 5. 捕获网络错误
+                message.className = 'error';
+                message.textContent = `网络错误：${err.message}，请检查后端是否启动`;
+            }
+        }
+    </script>
+</body>
+</html>

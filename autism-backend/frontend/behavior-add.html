@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>掬星平台 - 行为录入</title>
+    <style>
+        .container { width: 600px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .form-item { margin: 15px 0; }
+        label { display: inline-block; width: 120px; }
+        input, select { padding: 8px; width: 300px; }
+        button { padding: 10px 20px; background: #409eff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #message { margin-top: 20px; color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>行为记录录入</h2>
+        <!-- 改造：儿童ID改为下拉选择 -->
+        <div class="form-item">
+            <label>儿童ID：</label>
+            <select id="child_id" required>
+                <option value="">请选择儿童</option>
+                <!-- 动态加载儿童列表 -->
+            </select>
+        </div>
+        <div class="form-item">
+            <label>行为类型：</label>
+            <select id="behavior_type">
+                <option value="专注">专注</option>
+                <option value="被动走神">被动走神</option>
+                <option value="主动发起">主动发起</option>
+                <option value="社交回避">社交回避</option>
+                <option value="平稳">平稳</option>
+                <option value="烦躁">烦躁</option>
+            </select>
+        </div>
+        <div class="form-item">
+            <label>行为强度：</label>
+            <select id="intensity">
+                <option value="1">1 - 弱</option>
+                <option value="2">2 - 中</option>
+                <option value="3">3 - 强</option>
+            </select>
+        </div>
+        <div class="form-item">
+            <label>开始时间戳：</label>
+            <input type="text" id="start_time" placeholder="毫秒级UTC时间戳，如 1735689923000">
+        </div>
+        <div class="form-item">
+            <label>结束时间戳：</label>
+            <input type="text" id="end_time" placeholder="如 1735689926000">
+        </div>
+        <div class="form-item">
+            <label>场景：</label>
+            <input type="text" id="scene" placeholder="如 课堂互动">
+        </div>
+        <!-- 改造：记录人ID改为下拉选择 -->
+        <div class="form-item">
+            <label>记录人ID：</label>
+            <select id="observer_id" required>
+                <option value="">请选择记录人</option>
+                <!-- 动态加载记录人列表 -->
+            </select>
+        </div>
+        <button onclick="addBehavior()">提交录入</button>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // 页面加载时自动加载儿童和记录人列表
+        window.onload = async function() {
+            // 1. 加载儿童列表
+            try {
+                const childRes = await fetch('http://localhost:3000/api/child/list');
+                const childResult = await childRes.json();
+                if (childResult.success) {
+                    const childSelect = document.getElementById('child_id');
+                    // 清空默认选项（保留提示）
+                    childSelect.innerHTML = '<option value="">请选择儿童</option>';
+                    // 遍历添加儿童选项
+                    childResult.data.forEach(child => {
+                        const option = document.createElement('option');
+                        option.value = child.child_id;
+                        option.textContent = `${child.child_id} - ${child.child_name}`;
+                        childSelect.appendChild(option);
+                    });
+                } else {
+                    document.getElementById('message').textContent = '加载儿童列表失败：' + childResult.message;
+                }
+            } catch (err) {
+                document.getElementById('message').textContent = '加载儿童列表失败：网络错误';
+            }
+
+            // 2. 加载记录人列表
+            try {
+                const userRes = await fetch('http://localhost:3000/api/user/list');
+                const userResult = await userRes.json();
+                if (userResult.success) {
+                    const userSelect = document.getElementById('observer_id');
+                    // 清空默认选项（保留提示）
+                    userSelect.innerHTML = '<option value="">请选择记录人</option>';
+                    // 遍历添加记录人选项
+                    userResult.data.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.user_id;
+                        option.textContent = `${user.user_id} - ${user.username}（${user.role === 'researcher' ? '研究者' : '教育者'}）`;
+                        userSelect.appendChild(option);
+                    });
+                } else {
+                    document.getElementById('message').textContent = '加载记录人列表失败：' + userResult.message;
+                }
+            } catch (err) {
+                document.getElementById('message').textContent = '加载记录人列表失败：网络错误';
+            }
+        };
+
+        // 原有提交逻辑（无需修改）
+        async function addBehavior() {
+            // 1. 获取表单数据
+            const data = {
+                child_id: document.getElementById('child_id').value,
+                behavior_type: document.getElementById('behavior_type').value,
+                intensity: document.getElementById('intensity').value,
+                start_time: document.getElementById('start_time').value,
+                end_time: document.getElementById('end_time').value,
+                scene: document.getElementById('scene').value,
+                observer_id: document.getElementById('observer_id').value
+            };
+
+            // 基础校验：必填项不能为空
+            if (!data.child_id || !data.observer_id) {
+                document.getElementById('message').textContent = '儿童ID和记录人ID不能为空，请选择！';
+                return;
+            }
+
+            // 2. 调用后端接口
+            try {
+                const response = await fetch('http://localhost:3000/api/behavior/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                
+                // 3. 显示结果
+                const message = document.getElementById('message');
+                if (result.success) {
+                    message.style.color = 'green';
+                    message.textContent = result.message;
+                } else {
+                    message.style.color = 'red';
+                    message.textContent = result.message;
+                }
+            } catch (err) {
+                document.getElementById('message').textContent = '网络错误，请检查后端是否启动';
+            }
+        }
+    </script>
+</body>
+</html>
