@@ -1,6 +1,7 @@
 import numpy as np
 import mne
 from scipy import signal
+from scipy.integrate import trapezoid as trapz
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from hmmlearn import hmm
@@ -282,7 +283,7 @@ class EEGProcessor:
             for ch in range(n_channels):
                 for band, (low, high) in self.band_params.items():
                     idx_band = np.logical_and(freqs >= low, freqs <= high)
-                    band_power = np.trapz(psd[window, ch, idx_band], freqs[idx_band])
+                    band_power = trapz(psd[window, ch, idx_band], freqs[idx_band])
                     window_features.append(band_power)
             features.append(window_features)
         
