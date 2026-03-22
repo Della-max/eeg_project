@@ -8,7 +8,7 @@ app = Flask(__name__)
 # -------------------------- 配置项（你需要改这里！） --------------------------
 # 填写你的MySQL连接信息
 MYSQL_CONFIG = {
-    "host": "localhost",       # 固定值，不用改
+    "host": "172.30.221.23",       # 固定值，不用改
     "user": "root",            # 你的MySQL用户名（一般是root）
     "password": "2006219wy", # 改成你装MySQL时设置的密码！！！
     "database": "autism_system",# 数据库名，和SQL里的一致，不用改
